@@ -14,9 +14,16 @@ url = input('Введите полную ссылку на тему, для ко
 ##url = 'http://demiart.ru/forum/index.php?showtopic=259709'
 
 split_url = url.split('=')[1]
+login_url = url.split('?')[0] + '?'
 gallery_url = 'https://demiart.ru/forum/index.php?'
 gallery_url += 'act=module&module=gallery&cmd=user&user=2&op=topic_images&topic='
 parse_url = gallery_url + split_url
+
+# Авторизуемся на форуме
+g.go(login_url)
+g.doc.set_input('UserName', 'Dark Wood')
+g.doc.set_input('PassWord', 'ui7R49JK')
+g.doc.submit()
 
 g.go(parse_url)
 
