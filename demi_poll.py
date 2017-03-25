@@ -20,6 +20,7 @@ g = Grab()
 url = 'http://demiart.ru/forum/index.php?showtopic=259709'
 
 login_url = url.split('?')[0] + '?'
+gallery_url = login_url + 'act=module&module=gallery&cmd=user&user=2&op=topic_images&topic=' + url.split('=')[1]
 
 # Авторизуемся на форуме
 g.go(login_url)
@@ -27,10 +28,12 @@ g.doc.set_input('UserName', 'Dark Wood')
 g.doc.set_input('PassWord', 'ui7R49JK')
 g.doc.submit()
 
-g.go(url)
+##g.go(gallery_url)
 
-# Список страниц
-pagination = []
+# Список страниц темы
+theme_pagination = []
+# Список страниц галереи
+gallery_pagination = []
 # Список пользователей
 usernames = []
 # Список ссылок на изображения
@@ -40,51 +43,59 @@ all_image_links = []
 # Список дат сообщений
 dates = []
 
+def get_data():
+    """Получает имя пользователя и соответствующую ему ссылку на изображение"""
+    images = g.doc.select("//div[@class='postspace2']//img")
+    for image in images:
+        selection = image.select("@src").text()
+        all_image_links.append(selection)
+    users = g.doc.select("//span[@class='thumb_name'][2]")
+    for user in users:
+        selection = user.text()
+        usernames.append(selection)
+    dates_sel = g.doc.select("//div[@class='thumb-cell-pad']")
+    for date in dates_sel:
+        selection = date.rex('(\s\d{1,2}.*:\d{2})').text()
+        dates.append(selection)
+
+def get_pages(url, output_list, k=0):
+    # Если страниц больше одной, то формируются ссылки на них,
+    # которые добавляются в соответствующий список
+    # Скрипт проверяет есть ли в данной теме пагинация (страницы)
+    pages = g.doc.select("//table[@class='iptable']/tr/td/span/a")
+    if pages.exists() == True:
+        for page in range(0, int(pages.text()[-1])):
+            if output_list == theme_pagination:
+                k = 15
+                page = page*k
+            elif output_list == gallery_pagination:
+                k = 30
+                page = page*k
+            output_list.append(url + '&st=' + str(page))
+        # Обрабатываются все найденные страницы
+        for page in output_list:
+            g.go(page)
+            get_data()
+    # Если страницы одна, то она не добавляется в список пагинации,
+    # а сразу обрабатывается
+    else:
+        g.go(url)
+        get_data()
+
 def filter_images(input_list):
     filtered_image = filter(demi_image.match, input_list)
     output_list = list(filtered_image)
     return output_list
 
-def get_data():
-    """Получает имя пользователя и соответствующую ему ссылку на изображение"""
-    users = g.doc.select("//span[@class='normalname']")
-    for user in users:
-        selection = user.select("a").text()
-        usernames.append(selection)
-    images = g.doc.select("//div[@class='postspace2']//img")
-    for image in images:
-        selection = image.select("@src").text()
-        all_image_links.append(selection)
-    dates_sel = g.doc.select("//span[@class='postdetails m-none']")
-    for date in dates_sel:
-        selection = date.rex('(\s\d{1,2}.*:\d{2})').text()
-        dates.append(selection)
+get_pages(url, theme_pagination)
 
-# Скрипт проверяет есть ли в данной теме пагинация (страницы)
-pages = g.doc.select("//table[@class='iptable']/tr/td[1]/span/a")
+get_pages(gallery_url, gallery_pagination)
 
-# Если страниц больше одной, то формируются ссылки на них,
-# которые добавляются в соответствующий список
-if pages.exists() == True:
-    for page in range(0, int(pages.text()[-1])):
-        page = page*15
-        pagination.append(url + '&st=' + str(page))
-    # Обрабатываются все найденные страницы
-    for page in pagination:
-        g.go(page)
-        get_data()
-# Если страницы одна, то она не добавляется в список пагинации,
-# а сразу обрабатывается
-else:
-    g.go(url)
-    get_data()
-
-print(pagination)
-print(len(usernames))
+print(usernames)
 demi_image = re.compile('.*uploads.*')
 demi_image_links = filter_images(all_image_links)
-print(len(demi_image_links))
-print(dates[-1])
+print(demi_image_links)
+print(dates)
 
 ### Создается база данных (в данном случае в виде словаря)
 ### из имен пользователей и ссылок на изображения
