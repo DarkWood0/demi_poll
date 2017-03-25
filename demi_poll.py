@@ -28,7 +28,7 @@ g.doc.set_input('UserName', 'Dark Wood')
 g.doc.set_input('PassWord', 'ui7R49JK')
 g.doc.submit()
 
-##g.go(gallery_url)
+##g.go(url)
 
 # Список страниц темы
 theme_pagination = []
@@ -43,25 +43,28 @@ all_image_links = []
 # Список дат сообщений
 dates = []
 
-def get_data():
+def get_data(url):
     """Получает имя пользователя и соответствующую ему ссылку на изображение"""
-    images = g.doc.select("//div[@class='postspace2']//img")
-    for image in images:
-        selection = image.select("@src").text()
-        all_image_links.append(selection)
-    users = g.doc.select("//span[@class='thumb_name'][2]")
-    for user in users:
-        selection = user.text()
-        usernames.append(selection)
-    dates_sel = g.doc.select("//div[@class='thumb-cell-pad']")
-    for date in dates_sel:
-        selection = date.rex('(\s\d{1,2}.*:\d{2})').text()
-        dates.append(selection)
+    if url == url:
+        images = g.doc.select("//div[@class='postspace2']//img")
+        for image in images:
+            selection = image.select("@src").text()
+            all_image_links.append(selection)
+    elif url == gallery_url:
+        users = g.doc.select("//span[@class='thumb_name'][2]")
+        for user in users:
+            selection = user.text()
+            usernames.append(selection)
+        dates_sel = g.doc.select("//div[@class='thumb-cell-pad']")
+        for date in dates_sel:
+            selection = date.rex('(\s\d{1,2}.*:\d{2})').text()
+            dates.append(selection)
 
 def get_pages(url, output_list, k=0):
     # Если страниц больше одной, то формируются ссылки на них,
     # которые добавляются в соответствующий список
     # Скрипт проверяет есть ли в данной теме пагинация (страницы)
+    g.go(url)
     pages = g.doc.select("//table[@class='iptable']/tr/td/span/a")
     if pages.exists() == True:
         for page in range(0, int(pages.text()[-1])):
@@ -75,12 +78,12 @@ def get_pages(url, output_list, k=0):
         # Обрабатываются все найденные страницы
         for page in output_list:
             g.go(page)
-            get_data()
+            get_data(page)
     # Если страницы одна, то она не добавляется в список пагинации,
     # а сразу обрабатывается
     else:
         g.go(url)
-        get_data()
+        get_data(url)
 
 def filter_images(input_list):
     filtered_image = filter(demi_image.match, input_list)
@@ -91,11 +94,13 @@ get_pages(url, theme_pagination)
 
 get_pages(gallery_url, gallery_pagination)
 
-print(usernames)
-demi_image = re.compile('.*uploads.*')
-demi_image_links = filter_images(all_image_links)
-print(demi_image_links)
-print(dates)
+print(theme_pagination)
+print(gallery_pagination)
+##print(usernames)
+##demi_image = re.compile('.*uploads.*')
+##demi_image_links = filter_images(all_image_links)
+##print(demi_image_links)
+##print(dates)
 
 ### Создается база данных (в данном случае в виде словаря)
 ### из имен пользователей и ссылок на изображения
